@@ -6,6 +6,7 @@ from six import BytesIO, text_type
 from rest_framework_csv.orderedrows import OrderedRows
 from rest_framework_csv.misc import Echo
 import xlrd
+import xlwt
 from datetime import datetime, date
 from logging import getLogger
 log = getLogger(__name__)
