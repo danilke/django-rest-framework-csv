@@ -259,6 +259,7 @@ class XLSRenderer(CSVRenderer):
             sheetname = sheetname[:31]
         ws = wb.add_sheet(sheetname or 'Data')
         self.to_worksheet(tabular_data, ws)
+        wb.save()
         return wb
 
     def to_worksheet(self, tabular_data, worksheet):
