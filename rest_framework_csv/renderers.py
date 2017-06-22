@@ -5,7 +5,8 @@ from rest_framework.renderers import *
 from six import BytesIO, text_type
 from rest_framework_csv.orderedrows import OrderedRows
 from rest_framework_csv.misc import Echo
-
+import xlrd
+from datetime import datetime, date
 from logging import getLogger
 log = getLogger(__name__)
 
@@ -228,3 +229,56 @@ class CSVStreamingRenderer(CSVRenderer):
         csv_writer = csv.writer(csv_buffer, encoding=encoding, **writer_opts)
         for row in table:
             yield csv_writer.writerow(row)
+
+
+class XLSRenderer(CSVRenderer):
+    """
+    Renderer which serializes to XLS
+    """
+
+    media_type = 'application/vnd.ms-excel'
+    format = 'xls'
+
+    def render(self, data, media_type=None, renderer_context=None, sheetname='First'):
+        table = self.tablize(data)
+        wb = self.to_workbook(table, sheetname=sheetname)
+        return wb
+
+    # source: http://fragmentsofcode.wordpress.com/2009/10/09/xlwt-convenience-methods/
+    def to_workbook(self, tabular_data, workbook=None, sheetname=None):
+        """
+        Returns the Excel workbook (creating a new workbook
+        if necessary) with the tabular data written to a worksheet
+        with the name passed in the 'sheetname' parameter (or a
+        default value if sheetname is None or empty).
+        """
+        #wb = workbook or xlwt.Workbook(encoding='utf8')
+        wb = xlwt.Workbook(encoding='utf-8')
+        if len(sheetname)>31:
+            sheetname = sheetname[:31]
+        ws = wb.add_sheet(sheetname or 'Data')
+        self.to_worksheet(tabular_data, ws)
+        return wb
+
+    def to_worksheet(self, tabular_data, worksheet):
+        """
+        Writes the tabular data to the worksheet (returns None).
+        Thanks to John Machin for the tip on using enumerate().
+        """
+
+        default_style = xlwt.Style.default_style
+        datetime_style = xlwt.easyxf(num_format_str='dd/mm/yyyy hh:mm')
+        date_style = xlwt.easyxf(num_format_str='dd/mm/yyyy')
+
+        for row, rowdata in enumerate(tabular_data):
+            worksheet_row = worksheet.row(row)
+            for col, val in enumerate(rowdata):
+                if isinstance(val, datetime):
+                    val = val.replace(tzinfo=None)
+                    style = datetime_style
+                elif isinstance(val, date):
+                    style = date_style
+                else:
+                    style = default_style
+        
+                worksheet_row.write(col, val, style=style)
